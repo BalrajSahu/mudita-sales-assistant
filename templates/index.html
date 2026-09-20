@@ -1,0 +1,526 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Northstar Sales Assistant</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f5f7fb;
+            color: #18202a;
+        }
+
+        .top {
+            padding: 20px 28px;
+            background: #162d4d;
+            color: white;
+        }
+
+        .top h2 {
+            margin: 0 0 5px 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 18px;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #dde3eb;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .lead {
+            padding: 12px;
+            border: 1px solid #e2e6ec;
+            border-radius: 8px;
+            margin: 8px 0;
+            cursor: pointer;
+        }
+
+        .lead:hover {
+            background: #f7f9fc;
+        }
+
+        .muted {
+            color: #687386;
+            font-size: 13px;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: #eef2f7;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        button {
+            padding: 9px 12px;
+            border: 0;
+            border-radius: 7px;
+            background: #1f6feb;
+            color: white;
+            cursor: pointer;
+            margin: 4px 4px 4px 0;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .danger {
+            background: #c93535;
+        }
+
+        .success {
+            background: #16803c;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 9px;
+            margin: 5px 0 10px;
+            border: 1px solid #ccd3dd;
+            border-radius: 7px;
+        }
+
+        textarea {
+            min-height: 90px;
+        }
+
+        .section {
+            margin-top: 18px;
+            padding-top: 15px;
+            border-top: 1px solid #e1e5eb;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            background: #f3f5f8;
+        }
+
+        .inbound {
+            border-left: 4px solid #1f6feb;
+        }
+
+        .outbound {
+            border-left: 4px solid #16803c;
+        }
+
+        .result {
+            background: #f8fafc;
+            border: 1px solid #dce2e9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .empty {
+            color: #687386;
+            padding: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="top">
+    <h2>Northstar Analytics — Sales Assistant</h2>
+    <div>Unified inquiry → qualification → routing → booking</div>
+</div>
+
+<div class="grid">
+
+    <!-- LEFT SIDE -->
+    <div class="card">
+
+        <h3>Leads</h3>
+
+        {% for x in leads %}
+
+        <div class="lead" onclick="loadLead('{{ x['id'] }}')">
+
+            <b>{{ x['sender_name'] or x['sender_id'] }}</b>
+
+            <br>
+
+            <span class="pill">
+                {{ x['channel'] }}
+            </span>
+
+            <span class="pill">
+                {{ x['status'] }}
+            </span>
+
+            {% if x['assigned_rep'] %}
+            <span class="pill">
+                {{ x['assigned_rep'] }}
+            </span>
+            {% endif %}
+
+            <br>
+
+            <span class="muted">
+                {{ x['id'] }}
+            </span>
+
+        </div>
+
+        {% else %}
+
+        <p class="empty">No inquiries yet.</p>
+
+        {% endfor %}
+
+
+        <div class="section">
+
+            <h4>Quick test inquiry</h4>
+
+            <form method="post" action="/api/test/inquiry">
+
+                <label>Channel</label>
+
+                <select name="channel">
+                    <option>Instagram</option>
+                    <option>WhatsApp</option>
+                    <option>Email</option>
+                </select>
+
+                <label>Sender</label>
+
+                <input
+                    name="sender"
+                    placeholder="sender id"
+                    required
+                >
+
+                <label>Inquiry</label>
+
+                <textarea
+                    name="message"
+                    placeholder="Inquiry"
+                    required
+                ></textarea>
+
+                <button type="submit">
+                    Receive inquiry
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- RIGHT SIDE -->
+    <div class="card">
+
+        <h3>Lead Details</h3>
+
+        <div id="details">
+
+            <p class="empty">
+                Select a lead from the left.
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+async function loadLead(cid) {
+
+    const response = await fetch("/api/leads/" + encodeURIComponent(cid));
+
+    const data = await response.json();
+
+    const conv = data.conversation;
+
+    if (!conv) {
+        document.getElementById("details").innerHTML =
+            "<p>Lead not found.</p>";
+        return;
+    }
+
+
+    let html = "";
+
+    html += `
+        <div class="result">
+            <b>Channel:</b> ${escapeHtml(conv.channel)}<br>
+            <b>Sender:</b> ${escapeHtml(conv.sender_name || conv.sender_id)}<br>
+            <b>Status:</b> ${escapeHtml(conv.status)}<br>
+            <b>Assigned rep:</b> ${escapeHtml(conv.assigned_rep || "Not assigned")}
+        </div>
+    `;
+
+
+    html += `
+        <div class="section">
+            <h4>Conversation</h4>
+    `;
+
+
+    for (const msg of data.messages) {
+
+        const direction = msg.direction === "inbound"
+            ? "inbound"
+            : "outbound";
+
+        html += `
+            <div class="message ${direction}">
+                <b>${direction === "inbound" ? "Lead" : "Assistant"}:</b>
+                ${escapeHtml(msg.body)}
+            </div>
+        `;
+    }
+
+
+    html += `</div>`;
+
+
+    html += `
+        <div class="section">
+
+            <h4>Actions</h4>
+
+            <button
+                class="success"
+                onclick="processLead('${escapeHtml(cid)}')">
+                Process Lead
+            </button>
+
+            <button
+                class="danger"
+                onclick="takeover('${escapeHtml(cid)}')">
+                Take Over
+            </button>
+
+            <div id="process-result"></div>
+
+        </div>
+    `;
+
+
+    html += `
+        <div class="section">
+
+            <h4>Action Log</h4>
+
+            <div id="action-log">
+    `;
+
+
+    for (const action of data.actions) {
+
+        html += `
+            <div class="message">
+                <b>${escapeHtml(action.action_type)}</b><br>
+                <span class="muted">
+                    ${escapeHtml(action.details || "")}
+                </span>
+            </div>
+        `;
+    }
+
+
+    html += `
+            </div>
+        </div>
+    `;
+
+
+    document.getElementById("details").innerHTML = html;
+}
+
+
+async function processLead(cid) {
+
+    const resultBox = document.getElementById("process-result");
+
+    resultBox.innerHTML = `
+        <div class="result">
+            Processing with Gemini...
+        </div>
+    `;
+
+
+    try {
+
+        const response = await fetch(
+            "/api/leads/" + encodeURIComponent(cid) + "/process",
+            {
+                method: "POST"
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+
+            resultBox.innerHTML = `
+                <div class="result">
+                    <b>Error:</b>
+                    ${escapeHtml(data.detail || "Unable to process lead")}
+                </div>
+            `;
+
+            return;
+        }
+
+
+        let html = `
+            <div class="result">
+
+                <h4>Qualification Result</h4>
+
+                <b>Status:</b>
+                ${escapeHtml(data.status)}
+
+                <br><br>
+
+                <b>Assigned Rep:</b>
+                ${escapeHtml(data.assignment || "Not assigned")}
+
+        `;
+
+
+        if (data.qualification) {
+
+            html += `
+                <br><br>
+                <b>Evidence:</b>
+                <ul>
+            `;
+
+
+            for (const evidence of (data.qualification.evidence || [])) {
+
+                html += `
+                    <li>${escapeHtml(evidence)}</li>
+                `;
+            }
+
+
+            html += `</ul>`;
+
+
+            if ((data.qualification.missing || []).length > 0) {
+
+                html += `
+                    <b>Missing information:</b>
+                    <ul>
+                `;
+
+
+                for (const missing of data.qualification.missing) {
+
+                    html += `
+                        <li>${escapeHtml(missing)}</li>
+                    `;
+                }
+
+
+                html += `</ul>`;
+            }
+        }
+
+
+        if (data.reply) {
+
+            html += `
+                <br>
+                <b>Assistant Reply:</b>
+
+                <div class="message outbound">
+                    ${escapeHtml(data.reply)}
+                </div>
+            `;
+        }
+
+
+        html += `</div>`;
+
+
+        resultBox.innerHTML = html;
+
+
+        // Refresh the lead so conversation and action log update.
+        setTimeout(() => loadLead(cid), 500);
+
+    } catch (error) {
+
+        resultBox.innerHTML = `
+            <div class="result">
+                <b>Error:</b>
+                ${escapeHtml(error.message)}
+            </div>
+        `;
+    }
+}
+
+
+async function takeover(cid) {
+
+    const response = await fetch(
+        "/api/leads/" + encodeURIComponent(cid) + "/takeover",
+        {
+            method: "POST"
+        }
+    );
+
+
+    const data = await response.json();
+
+
+    if (data.ok) {
+
+        alert("Human takeover enabled. Automatic actions are stopped.");
+
+        loadLead(cid);
+
+    } else {
+
+        alert("Unable to enable takeover.");
+
+    }
+}
+
+
+function escapeHtml(value) {
+
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+</script>
+
+</body>
+</html>
