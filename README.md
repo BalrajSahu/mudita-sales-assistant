@@ -1,6 +1,6 @@
 # Northstar Analytics — Assignment 01
 
-Focused prototype for Mudita AI Generalist hiring assignment: incoming inquiries → qualification → routing → calendar booking → human control.
+Focused prototype: incoming inquiries → qualification → routing → calendar booking → human control.
 
 ## Stack
 - FastAPI + SQLite
