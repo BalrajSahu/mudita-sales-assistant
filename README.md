@@ -1,4 +1,4 @@
-# Northstar Analytics — Assignment 01
+# Mudita — Assignment 01
 
 Focused prototype: incoming inquiries → qualification → routing → calendar booking → human control.
 
